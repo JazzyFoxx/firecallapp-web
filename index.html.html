@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en"></html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>FIRECALL APP Monitoring System</title>
+
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" 
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+
+        <!-- Bootstrap CSS -->
+        <link href="https://stackpath.bootstrapcdn.com/bootstrap/5.1.0/css/bootstrap.min.css" rel="stylesheet">
+
+        <link rel="stylesheet" href="styles.css">
+
+        <!-- Bootstrap JS -->
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/5.1.0/js/bootstrap.bundle.min.js"></script>
+
+
+        <!-- Firebase App (the core Firebase SDK) -->
+        <script src="https://www.gstatic.com/firebasejs/9.21.0/firebase-app-compat.js"></script>
+        <!-- Firebase Realtime Database SDK -->
+        <script src="https://www.gstatic.com/firebasejs/9.21.0/firebase-database-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.21.0/firebase-auth-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-analytics.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+       
+    </head>
+    
+    <body>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" 
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+        <!--for audio notif-->
+        <audio id="notificationSound" src="newreportnotification.wav" preload="auto"></audio> 
+  
+       <!-- Login Modal -->
+       <div class="modal fade login-modal" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+           <div class="modal-dialog modal-dialog-centered">
+               <div class="modal-content">
+                   <div class="modal-header">
+                       <h5 class="modal-title w-100 text-center" id="loginModalLabel">
+                           <b>Operator Login</b>
+                       </h5>
+                   </div>
+                   <div class="modal-body">
+                       <form id="loginForm">
+                           <div class="mb-3">
+                               <label for="loginEmail" class="form-label">Email</label>
+                               <input type="email" class="form-control" id="loginEmail" required>
+                           </div>
+                           <div class="mb-3">
+                               <label for="loginPassword" class="form-label">Password</label>
+                               <div class="input-group">
+                                   <input type="password" class="form-control" id="loginPassword" required>
+                                   <button type="button" class="btn btn-outline-secondary" id="togglePassword">
+                                       Show
+                                   </button>
+                               </div>
+                           </div>
+                       </form>
+                   </div>
+                   <div class="modal-footer">
+                       <button type="submit" class="btn btn-primary" form="loginForm">Login</button>
+                   </div>
+               </div>
+           </div>
+       </div>
+   
+       <!-- Report Log Modal -->
+       <div id="reportLogModal" class="custom-modal">
+            <div class="custom-modal-dialog">
+                <div class="custom-modal-content">
+                    <span class="custom-modal-close">&times;</span>
+                    <div class="custom-modal-header bg-info">
+                        <h5 class="custom-modal-title">Log Report Action</h5>
+                    </div>
+                    <div class="custom-modal-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Log ID:</strong> <span id="logReportId"></span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Name of Sender:</strong> <span id="logReportName"></span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Time Taken:</strong> <span id="logReportTimeTaken"></span></p>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="status"><strong>Incident Status:</strong></label>
+                                <textarea id="reportStatus" rows="1" class="form-control" placeholder="Enter Incident Status"></textarea>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="incidentType">Type of Incident:</label>
+                            <select id="incidentType" class="form-control" placeholder="Type of Incident" >
+                                <option value="" disabled selected>Select Type of Incident</option>
+                                <option value="Fire">Fire</option>
+                                <option value="Rescue">Rescue/Retrieval</option>
+                                <option value="Disaster">Disaster Response</option>
+                                <option value="HazMat">HazMat</option>
+                                <option value="RTA">Road Traffic Accident</option>
+                                <option value="AnimalRescue">Animal Rescue</option>
+                                <option value="Medical">Medical</option>
+                                <option value="Other">Others</option>
+                            </select>
+                        </div>
+                        <label for="remarks"><strong>Log Details:</strong></label>
+                        <textarea id="reportRemarks" rows="4" class="form-control" placeholder="Enter your Log details..."></textarea>
+                    </div>
+                    <div class="custom-modal-footer">
+                        <button type="button" class="btn-secondary close-modal" id="close-log-modal">Close</button>
+                        <button type="button" class="btn-primary" id="saveReportLogBtn">Save</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+       <div id="notificationPopup" style="display: none; position: fixed; bottom: 20px; right: 20px; padding: 20px; background-color: #f8d7da; 
+            border: 1px solid #f5c6cb; border-radius: 10px; z-index: 1000;">
+            <h4>New Report Received!</h4>
+            <p id="popupSender"></p>
+            <p id="popupTime"></p>
+            <button id="popupCloseButton">OK</button>
+        </div>
+
+        <div class="main-page">
+            <div class="header">
+                <div class="left-images">
+                    <img src="bfpLogo.png" alt="Image 1"> 
+                    <img src="bagongPilipinasLogo.png" alt="Image 2">
+                    <img src="bfp11Logo.png" alt="Image 3"> 
+                </div>
+                <img src="firecalllogo.png" alt="Main Logo" class="main-logo"> 
+                <img src="fuerzsax.png" alt="Author logo" class="author-logo">
+                <p>
+                    <b>Real-time Incident Capture and Reporting System</b>
+                </p>
+            </div>
+
+            <div class="navbar">
+                <div class="navbar-left">
+                    <a href="#" onclick="loadLayout('reports')">Live Reports</a>
+                    <a href="#" onclick="loadLayout('reportLog')">Report Logs</a>
+                    <a href="#" onclick="loadLayout('users')">User Analytics</a>
+                </div>
+                <a href="#" class="logout">Logout</a>
+            </div>
+
+            <div class="contentArea">
+                <!--For displaying contents-->
+            </div>
+
+            <div class="footer">
+                <p>
+                    <i>©JazzyFoxx Systems v1.0 s2024</i>
+                </p>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+        <!--JS code start here-->
+        <script>
+
+            // Import the functions you need from database SDK
+            const firebaseConfig = {
+                apiKey: "AIzaSyCgnEVKGPHTp-MRDciqChFE-gl3p6_PnqQ",
+                authDomain: "firecall-userdb.firebaseapp.com",
+                databaseURL: "https://firecall-userdb-default-rtdb.firebaseio.com",
+                projectId: "firecall-userdb",
+                storageBucket: "firecall-userdb.appspot.com",
+                messagingSenderId: "687876529423",
+                appId: "1:687876529423:web:f455a5dc8f21db69e9727a",
+                measurementId: "G-FCETG2E61S"
+            };
+
+            // Initialize Firebase
+            const app = firebase.initializeApp(firebaseConfig);
+            const auth = firebase.auth();
+        
+            const database = firebase.database();
+
+            document.addEventListener('DOMContentLoaded', () => {
+                if (Notification.permission !== 'granted') {
+                    Notification.requestPermission().then(permission => {
+                        if (permission === 'granted') {
+                            console.log('Notification permission granted.');
+                        }
+                    });
+                }
+            });
+
+            // Automatically trigger the login modal when the page loads
+            window.addEventListener('load', () => {
+                const loginModal = new bootstrap.Modal(document.getElementById('loginModal'), {
+                    backdrop: 'static',  // Prevent closing when clicking outside
+                    keyboard: false      // Disable closing with the "Esc" key
+                });
+                loginModal.show();
+
+                // Hide the report table until the user logs in
+                document.getElementById('reports_list').style.display = 'none';
+            });
+
+
+        
+    //------------------------------------------------------------------------------------------------
+            // Handle login form submission
+            const loginForm = document.getElementById('loginForm');
+            loginForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const email = document.getElementById('loginEmail').value;
+                const password = document.getElementById('loginPassword').value;
+
+                // Retrieve the operator data from the "operators" node
+                const operatorsRef = firebase.database().ref('operator');
+                
+                operatorsRef.orderByChild('email').equalTo(email).once('value')
+                    .then((snapshot) => {
+                        if (snapshot.exists()) {
+                            let validPassword = false;
+                            snapshot.forEach((operator) => {
+                                const storedPassword = operator.val().password;
+
+                                // Check if the provided password matches the stored password
+                                if (password === storedPassword) {
+                                    validPassword = true;
+                                }
+                            });
+
+                            if (validPassword) {
+                                // Now sign in using the email and password
+                                firebase.auth().signInWithEmailAndPassword(email, password)
+                                    .then((userCredential) => {
+                                        // Successful login
+                                        const user = userCredential.user;
+                                        alert('Login successful!');
+                                        // Close the modal
+                                        const loginModal = bootstrap.Modal.getInstance(document.getElementById('loginModal'));
+                                        loginModal.hide();
+
+                                        // Load the 'reports' section after successful login
+                                        loadLayout('reports'); // Load the "Live Reports" table
+                                    })
+                                    .catch((error) => {
+                                        // Handle login errors
+                                        alert('Login failed: ' + error.message);
+                                    });
+                            } else {
+                                alert('Invalid password.');
+                            }
+                        } else {
+                            alert('Email not found.');
+                        }
+                    })
+                    .catch((error) => {
+                        console.error('Error retrieving data from database:', error.message);
+                        alert('Failed to retrieve data.');
+                    });
+            });
+
+
+            //---------------------------------------------------------------------------------------------------
+            // Toggle password visibility
+            const togglePassword = document.getElementById('togglePassword');
+            const passwordField = document.getElementById('loginPassword');
+
+            togglePassword.addEventListener('click', () => {
+                const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordField.setAttribute('type', type);
+                
+                // Toggle the button text based on the visibility
+                togglePassword.textContent = type === 'password' ? 'Show' : 'Hide';
+            });
+
+        //---------------------------------------------------------------------------------------------------
+            // Add event listener to the logout link
+            document.querySelector('.logout').addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent the default anchor link behavior
+
+            const confirmation = confirm("Are you sure you want to log out?");
+            
+                if (confirmation) {
+                    
+                    firebase.auth().signOut()
+                        .then(() => {
+                        
+                            alert('You have been logged out.');
+                            // Optionally, redirect the user to the login page or refresh the page
+                            window.location.reload(); // or window.location.href = 'login.html';
+                        })
+                        .catch((error) => {
+                            // Handle errors
+                            console.error('Sign Out Error', error.message);
+                            alert('Error signing out: ' + error.message);
+                        });
+                } else {
+                    // If the user cancels, do nothing
+                    console.log('Logout canceled');
+                }
+            });
+    //-------------------------------------------------------------------------------------------------
+    //-----------------THIS SECTION WILL CHECK FOR NEW REPORT RECEIVED IN THE DATABASE--------------------------------------------------------------------------------
+            let initialLoad = true; // A flag to check if it's the initial load
+            let reportIds = new Set(); // Store the IDs of reports that have already been loaded
+
+            firebase.database().ref('reports').on('child_added', (snapshot) => {
+                const newReport = snapshot.val();
+                const reportKey = snapshot.key; // Unique key of the report
+                
+                // Check if the report is from the initial load or a new one
+                if (initialLoad) {
+                    // On the initial load, add the report ID to the set but don't show the notification
+                    reportIds.add(reportKey);
+                } else {
+                    // If it's not the initial load and the report ID isn't in the set, show notification
+                    if (!reportIds.has(reportKey)) {
+                        showCustomNotification({
+                            name: newReport.name,
+                            timeTaken: newReport.timeTaken,
+                        });
+                        reportIds.add(reportKey); // Add new report to the set
+                    }
+                }
+            });
+            
+            // After the initial load, set the flag to false
+            firebase.database().ref('reports').once('value', () => {
+            initialLoad = false;
+            });
+
+        //----------THEN SECTION WILL SHOW THE CUSTOM NOTIFICATION OF NEW REPORT RECEIVED------------------------------------------------------------------------------
+            const showCustomNotification = (reportDetails) => {
+            // Get the popup elements
+            const popup = document.getElementById('notificationPopup');
+            const senderText = document.getElementById('popupSender');
+            const timeText = document.getElementById('popupTime');
+            
+            // Set the report details
+            senderText.textContent = `Sender: ${reportDetails.name}`;
+            timeText.textContent = `Time: ${reportDetails.timeTaken}`;
+            
+            // Show the popup
+            popup.style.display = 'block';
+
+            const notificationSound = document.getElementById('notificationSound');
+            notificationSound.play();
+            
+            // Add event listener to close the popup on "OK" button click
+            const closeButton = document.getElementById('popupCloseButton');
+                closeButton.onclick = () => {
+                    popup.style.display = 'none';
+                };
+            };
+    //-----------------------------------------------------------------------------------------            
+
+    //-------------------------------------------------------------------------------------------------
+
+            function loadLayout(layoutType) {
+                const contentArea = document.querySelector('.contentArea');
+
+                if (layoutType === 'reports') {
+                    contentArea.innerHTML = `
+                         <div class="contentArea">
+                            <!-- Main content area for live reports -->
+                            <div class="reportsContainer">
+                                <h2>Live Reports (<span id="reportCounter">0</span>)</h2>
+                                <table id="reportsTable" class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>No.</th>
+                                            <th>Date/Time Taken</th>
+                                            <th>Name of Sender</th>
+                                            <th>Mobile Number</th>
+                                            <th>GPS Tag</th>
+                                            <th class="address">Address Geo Tag</th>
+                                            <th class="report-message">Report Message</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="reports_list">
+                                        <!-- Rows will be populated from Firebase -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <!-- Sidebar for report details -->
+                            <div class="sidebar">
+                                <h2 style="margin-bottom: 20px;">Report Details</h2>
+                                <p id="reportDetails">This is where the detail of the report will be displayed when clicked.</p>
+                            </div>
+                        </div>
+                    `;
+
+                    fetchReportsData();
+
+                } else if (layoutType === 'reportLog') {
+                    contentArea.innerHTML = `               
+                            <div class="main">
+                                <h2>Report Logs</h2>
+                                <div class="search-download-container">
+                                    <div class="search-container">
+                                        <label for="searchBox">Search Logged Reports: </label>
+                                        <input type="text" id="searchBox" placeholder="Search by Log ID...">
+                                        <button type="button" id="searchButton">Search</button>
+                                    </div>
+                                    <div class="download-button-container">
+                                        <button type="button" id="downloadButton" class="btn btn-secondary download-btn">Download Report Log</button>
+                                    </div>
+                                </div>
+                                <table id="reportLogTable" class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Log ID</th>
+                                            <th>Timestamp</th>
+                                            <th>Name of Sender</th>
+                                            <th>Type of Incident</th>
+                                            <th>Status</th>
+                                            <th>Remarks</th>
+                                            <th>Operator</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="reportLog_list">
+                                    </tbody>
+                                </table>
+                            </div>                        
+                    `;
+
+                    setTimeout(() => {
+                        fetchReportLogs();
+                    }, 100);
+
+                } else if (layoutType === 'users') {
+                    contentArea.innerHTML = `
+                        <div class="container">
+                            <h2>User count per Province</h2>
+                            
+                            <div class="user-content">
+                                <div class="user-table">
+                                    <table id="numberUserTable" class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Province:</th>
+                                                <th>No. of Mobile App Users</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="usersList">
+                                        </tbody>
+                                    </table>        
+                                </div>   
+
+                                <div class="user-chart">
+                                    <canvas id="provinceChart" width="400" height="200"></canvas>
+                                </div>
+                            </div>
+                        </div>           
+                    `;
+
+                    setTimeout(() => {
+                        fetchUsersByProvince();
+                    }, 100);
+                } 
+            }
+
+    //------To fetch and display data from reports node-------------------------------------------------------------------------------------------
+            function fetchReportsData() {
+                const reportsRef = firebase.database().ref('reports');
+
+                reportsRef.on('value', (snapshot) => {
+                    const reports = snapshot.val();
+                    const tbody = document.querySelector("#reportsTable tbody");
+                    const reportCount = document.getElementById("reportCounter");
+                    tbody.innerHTML = ''; // Clear the table body before adding updated data
+
+                    let count = 0; // Total count of reports
+
+                    // Convert reports object to an array and sort by timeTaken in descending order (newest first)
+                    const sortedReports = Object.keys(reports)
+                        .map(key => ({ id: key, ...reports[key] })) // Convert to array of objects
+                        .sort((a, b) => new Date(b.timeTaken) - new Date(a.timeTaken)); // Sort by timeTaken in descending order
+
+                    // Iterate through the sorted reports
+                    sortedReports.forEach((report, index) => {
+                        count++; // Increment the total count sequentially (1, 2, 3...)
+
+                        const row = document.createElement('tr');
+                        row.classList.add(report.read ? 'read' : 'unread');
+                        row.innerHTML = `
+                            <td>${index + 1}</td> <!-- Display row number starting from 1 -->
+                            <td>${new Date(report.timeTaken).toLocaleString()}</td> <!-- Convert timestamp to readable format -->
+                            <td>${report.name}</td>
+                            <td>${report.mobileNumber}</td>
+                            <td>${report.location}</td>
+                            <td>${report.address}</td>
+                            <td>${report.reportMessage}</td>
+                        `;
+
+                        // Add click event for marking as read and showing report details in the sidebar
+                        row.onclick = () => {
+                            markAsRead(report.id, row); // Mark the row as read on click
+                            showReportDetails(report);  // Show the report details in the sidebar
+                        };
+
+                        tbody.appendChild(row); 
+                    });
+
+                    reportCount.textContent = count; 
+                });
+            }
+
+
+            //-------FOR SHOWING REPORT DETAIL IN THE SIDEBAR--------
+            function showReportDetails(report) {
+                const sidebar = document.querySelector('.sidebar');
+                const reportModal = document.getElementById('reportLogModal');
+                const currentUser = firebase.auth().currentUser;
+
+                // Clear the previous content
+                sidebar.innerHTML = '<h2 style="margin-bottom: 30px;">Report Details</h2>';
+
+                // Create and append the "Log this report!" button
+                const button = document.createElement('button');
+                button.classList.add('report_log_button');
+                button.textContent = 'Log this report!';
+
+ 
+                sidebar.appendChild(button);
+
+                // Create a helper function for labeled text
+                const createLabeledText = (label, value) => {
+                    const element = document.createElement('p');
+                    element.innerHTML = `<strong>${label}:</strong> ${value}`;
+                    return element;
+                };
+
+                // Append the details to the sidebar
+                sidebar.appendChild(createLabeledText('Report ID', report.id || 'N/A'));
+                sidebar.appendChild(createLabeledText('Name', report.name || 'N/A'));
+                sidebar.appendChild(createLabeledText('Mobile Number', report.mobileNumber || 'N/A'));
+                sidebar.appendChild(createLabeledText('Date/Time Taken', new Date(report.timeTaken).toLocaleString() || 'N/A'));
+
+                // Append location with a clickable Google Maps link
+                const locationContainer = document.createElement('p');
+                const locationLabel = document.createElement('span');
+                locationLabel.innerHTML = '<strong>Location:</strong> ';
+                locationContainer.appendChild(locationLabel);
+
+                const locationElement = document.createElement('a');
+                locationElement.textContent = report.location || 'N/A';
+                locationElement.href = `https://www.google.com/maps?q=${encodeURIComponent(report.location)}`;
+                locationElement.target = '_blank';
+                locationElement.style.color = 'blue';  // Make it look like a link
+                locationElement.style.cursor = 'pointer';
+
+                locationContainer.appendChild(locationElement);
+                sidebar.appendChild(locationContainer);
+
+                sidebar.appendChild(createLabeledText('Address', report.address || 'N/A'));
+                sidebar.appendChild(createLabeledText('Report Message', report.reportMessage || 'N/A'));
+
+                // Display image if available with click-to-zoom functionality
+                if (report.imageUrl) {
+                    const image = document.createElement('img');
+                    image.src = report.imageUrl;
+                    image.alt = 'Report Image';
+                    image.style.maxWidth = '100%';  // Adjust image size for better sidebar fit
+                    image.style.cursor = 'pointer'; // Make it clear the image is clickable
+
+                    // Add click-to-zoom functionality
+                    image.onclick = () => {
+                        const modal = document.createElement('div');
+                        modal.style.position = 'fixed';
+                        modal.style.top = '0';
+                        modal.style.left = '0';
+                        modal.style.width = '100%';
+                        modal.style.height = '100%';
+                        modal.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+                        modal.style.display = 'flex';
+                        modal.style.justifyContent = 'center';
+                        modal.style.alignItems = 'center';
+                        modal.style.cursor = 'zoom-out';
+
+                        const zoomedImage = document.createElement('img');
+                        zoomedImage.src = report.imageUrl;
+                        zoomedImage.style.maxWidth = '90%';
+                        zoomedImage.style.maxHeight = '90%';
+
+                        modal.appendChild(zoomedImage);
+                        document.body.appendChild(modal);
+
+                        // Remove the modal when clicking outside the image
+                        modal.onclick = () => {
+                            document.body.removeChild(modal);
+                        };
+                    };
+
+                    sidebar.appendChild(image);  // Add the image to the sidebar
+                }
+
+                var modal = document.getElementById('reportLogModal')
+                var span = document.getElementsByClassName('custom-modal-close')[0]
+                var close = document.getElementById('close-log-modal')
+
+                button.onclick = function () {
+                    modal.style.display = "block"
+                    openLogReportPopup(report.id, report.name, new Date(report.timeTaken).toLocaleString());
+                }
+
+                span.onclick = function(event) {    
+                    modal.style.display = "none"    
+                }
+
+                close.onclick = function(event) {
+                     modal.style.display = "none"
+                }
+                
+                window.onclick = function(event) {
+                    if(event.target == modal) {
+                        modal.style.display = "none"
+                    }
+                }
+
+            }
+            //-- TO MARK REPORT AS READ IN THE DATABASE THEN UNBOLD IN DISPLAY TABLE-------
+            function markAsRead(reportId, row) {
+                const reportRef = firebase.database().ref(`reports/${reportId}`);
+                reportRef.update({ read: true });
+                row.classList.remove('unread');
+                row.classList.add('read');
+            }
+
+            //---FOR NOTIFICATION POPUP WHEN NEW REPORT RECEIVED IN DATABASE-----------
+            const showNewReportNotification = (reportDetails) => {
+                if (Notification.permission === 'granted') {
+                    const notification = new Notification('New Report Received!', {
+                        body: `Sender: ${reportDetails.name}\nTime: ${new Date(reportDetails.timeTaken).toLocaleString()}`,            
+                    });
+
+                    // Add a click event to the notification
+                    notification.onclick = () => {
+                        window.focus(); // Focus on the page if it's in the background
+                        showReportDetails(reportDetails); // Show details in the sidebar when clicked
+                    };
+                }
+            };
+
+            //---TO OPEN REPORT LOG MODAL WHEN LOG BUTTON WAS CLICKED-----------
+            function openLogReportPopup(id, name, timeTaken)  {
+                // Set the report ID and time taken in the modal
+
+                const logIdField = document.getElementById('logReportId');
+                const nameField = document.getElementById('logReportName'); 
+                const timeTakenField = document.getElementById('logReportTimeTaken');
+
+                // Set the values in the popup fields
+                logIdField.textContent = id ? id : 'N/A'; 
+                nameField.textContent = name ? name : 'N/A'; 
+                timeTakenField.textContent = timeTaken ? timeTaken : 'N/A'; 
+         
+                // Handle saving remarks to Firebase
+                document.getElementById('saveReportLogBtn').onclick = () => {
+                    const remarks = document.getElementById('reportRemarks').value;
+                    const status = document.getElementById('reportStatus').value;
+                    const incidentType = document.getElementById('incidentType').value;
+                    const user = firebase.auth().currentUser;
+
+                    // Check if the user is authenticated
+                    firebase.auth().onAuthStateChanged(function(user) {
+                    if (user) {
+                        const operator = user.email; 
+
+                        const reportLog = {
+                            logID: id,
+                            name: name,
+                            timeTaken: timeTaken,
+                            operator: operator,  // Add the current user (operator) to the report log
+                            status: status,
+                            typeOfIncident: incidentType,
+                            remarks: remarks,
+                            timestamp: new Date().toISOString(),
+                        };
+
+                        // Save the data to Firebase
+                        firebase.database().ref('reportLog').push(reportLog)
+                            .then(() => {
+                                alert('Report log saved.');                    
+                            })
+                            .catch((error) => {
+                                console.error('Error saving report log:', error);
+                                alert('Error saving report log: ' + error.message);
+                            });
+                    } else {
+                        alert('You must be logged in to save report logs.');
+                    }
+                });
+
+                };
+            };
+
+     //=========To fetch report logs===========================================================================   
+
+            function fetchReportLogs() {
+                const reportLogRef = firebase.database().ref('reportLog');
+
+                // Listen for data changes in 'reportLog' node
+                reportLogRef.on('value', (snapshot) => {
+                    if (snapshot.exists()) {
+                        const reportLogList = document.getElementById('reportLog_list');
+                        reportLogList.innerHTML = ''; 
+
+                        // Collect all reports into an array
+                        const reports = [];
+
+                        snapshot.forEach((childSnapshot) => {
+                            const report = childSnapshot.val();
+                            report.reportID = childSnapshot.key;  
+                            reports.push(report);
+                        });
+
+                        // Sort the reports by timestamp in descending order (newest first)
+                        reports.sort((a, b) => {
+                            const dateA = new Date(a.timestamp);
+                            const dateB = new Date(b.timestamp);
+                            return dateB - dateA;  // Newest first
+                        });
+
+                        // Render reports in the table
+                        renderReports(reports);
+
+                        // Add search functionality
+                        document.getElementById('searchButton').addEventListener('click', () => {
+                            const searchQuery = document.getElementById('searchBox').value.toLowerCase();
+                            const filteredReports = reports.filter(report => report.logID && report.logID.toLowerCase().includes(searchQuery));
+                            renderReports(filteredReports);
+                        });
+                        
+                        // Download report log functionality
+                        document.getElementById('downloadButton').addEventListener('click', () => {
+                            const csvContent = convertToCSV(reports);  // Convert reportLog data to CSV
+                            downloadCSV(csvContent, 'reportLog_data.csv');  // Trigger download
+                        });
+
+                    } else {
+                        console.log('No data available in reportLog node.');
+                    }
+                }, (error) => {
+                    console.error('Error fetching data: ', error);
+                });
+            }
+
+            // Function to render reports in the table
+            function renderReports(reports) {
+                const reportLogList = document.getElementById('reportLog_list');
+                reportLogList.innerHTML = ''; // Clear the existing rows
+
+                // Loop through the sorted reports and create table rows
+                reports.forEach((report) => {
+                    const logID = report.logID;
+                    const timestamp = report.timestamp || 'N/A';
+                    const name = report.name || 'Unknown';
+                    const typeOfIncident = report.typeOfIncident || 'Unspecified';
+                    const status = report.status || 'Pending';
+                    const remarks = report.remarks || 'None';
+                    const operator = report.operator;
+
+                    // Create and append the row
+                    const row = `<tr>
+                                    <td>${logID}</td>
+                                    <td>${timestamp}</td>
+                                    <td>${name}</td>
+                                    <td>${typeOfIncident}</td>
+                                    <td>${status}</td>
+                                    <td>${remarks}</td>
+                                    <td>${operator}</td>
+                                </tr>`;
+                    reportLogList.innerHTML += row;
+                });
+            }
+
+            // Function to convert reports data to CSV format
+            function convertToCSV(reports) {
+                const headers = ['logID', 'timestamp', 'name', 'typeOfIncident', 'status', 'remarks', 'operator'];
+                const rows = reports.map(report => [
+                    report.logID || 'N/A',
+                    report.timestamp || 'N/A',
+                    report.name || 'Unknown',
+                    report.typeOfIncident || 'Unspecified',
+                    report.status || 'Pending',
+                    report.remarks || 'None',
+                    report.operator || 'N/A'
+                ]);
+
+                // Combine headers and rows into CSV format
+                const csvRows = [headers.join(','), ...rows.map(row => row.join(','))];
+                return csvRows.join('\n');
+            }
+
+            // Function to trigger CSV file download
+            function downloadCSV(csvContent, filename) {
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+    //-------------------------------------------------------------------------------
+ /*           // Function to fetch users and count by province           
+            function fetchUsersByProvince() {
+                const database = firebase.database().ref('users');
+
+                database.once('value', (snapshot) => {
+                    const users = snapshot.val(); // Get all users
+                    const provinceCount = {};
+
+                    // Count users per province
+                    for (let uid in users) {
+                        const user = users[uid];
+                        const province = user.province;
+
+                        if (province) {
+                            if (provinceCount[province]) {
+                                provinceCount[province]++;
+                            } else {
+                                provinceCount[province] = 1;
+                            }
+                        }
+                    }
+
+                    // Update the table with the results
+                    updateUsersTable(provinceCount);
+                });
+            }
+
+            // Function to update the HTML table
+            function updateUsersTable(provinceCount) {
+                const usersList = document.getElementById('usersList');
+                usersList.innerHTML = ''; // Clear existing table rows
+
+                // Loop through the provinceCount object and create table rows
+                for (let province in provinceCount) {
+                    const row = document.createElement('tr');
+                    const provinceCell = document.createElement('td');
+                    const countCell = document.createElement('td');
+
+                    provinceCell.textContent = province;
+                    countCell.textContent = provinceCount[province];
+
+                    row.appendChild(provinceCell);
+                    row.appendChild(countCell);
+                    usersList.appendChild(row);
+                }
+            }
+   */
+            function fetchUsersByProvince() {
+                const database = firebase.database().ref('users');
+
+                database.once('value', (snapshot) => {
+                    const users = snapshot.val(); // Get all users
+                    const provinceCount = {};
+
+                    // Count users per province
+                    for (let uid in users) {
+                        const user = users[uid];
+                        const province = user.province;
+
+                        if (province) {
+                            if (provinceCount[province]) {
+                                provinceCount[province]++;
+                            } else {
+                                provinceCount[province] = 1;
+                            }
+                        }
+                    }
+
+                    // Update the table with the results
+                    updateUsersTable(provinceCount);
+
+                    // Create the bar chart with random colors
+                    createBarChart(provinceCount);
+                });
+            }
+
+            // Function to update the HTML table
+            function updateUsersTable(provinceCount) {
+                const usersList = document.getElementById('usersList');
+                usersList.innerHTML = ''; // Clear existing table rows
+
+                // Loop through the provinceCount object and create table rows
+                for (let province in provinceCount) {
+                    const row = document.createElement('tr');
+                    const provinceCell = document.createElement('td');
+                    const countCell = document.createElement('td');
+
+                    provinceCell.textContent = province;
+                    countCell.textContent = provinceCount[province];
+
+                    row.appendChild(provinceCell);
+                    row.appendChild(countCell);
+                    usersList.appendChild(row);
+                }
+            }
+
+            // Function to create a bar chart
+            function createBarChart(provinceCount) {
+                const ctx = document.getElementById('provinceChart').getContext('2d');
+
+                // Get the provinces and counts
+                const provinces = Object.keys(provinceCount);
+                const counts = Object.values(provinceCount);
+                
+                // Generate random colors
+                const colors = provinces.map(() => '#' + Math.floor(Math.random() * 16777215).toString(16));
+
+                const chart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: provinces,
+                        datasets: [{
+                            label: 'User Count by Province',
+                            data: counts,
+                            backgroundColor: colors,
+                            borderColor: colors.map(color => color.replace('1f', '3f')), // Slightly darker border color
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
+            }
+
+            
+
+        </script>
+    
+    </body>
+</html>
